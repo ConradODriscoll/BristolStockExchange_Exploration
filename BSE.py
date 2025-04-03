@@ -65,7 +65,7 @@ bse_sys_maxprice = 500                  # maximum price in the system, in cents/
 ticksize = 1  # minimum change in price, in cents/pennies
 
 
-# an Order/quote has a trader id, a type (buy/sell) price, quantity, timestamp, and unique i.d.
+# an Order/quote has a trader id, a type (buy/sell), a price, a quantity, a timestamp, and a unique i.d.
 class Order:
     """
     An Order: this is used both for client-orders from exogenous customers to the robot traders acting as sales traders,
@@ -117,7 +117,7 @@ class OrderbookHalf:
     def anonymize_lob(self):
         """
         anonymize a lob, strip out order details, format as a sorted list
-        NB for asks, the sorting should be reversed
+        NB for asks, the sorting should be reversed (does that mean it is reversed or the functionality should be added?)
         :return: <nothing>
         """
         self.lob_anon = []
@@ -293,6 +293,7 @@ class Exchange(Orderbook):
         if order.otype == 'Bid':
             self.bids.book_del(order)
             if self.bids.n_orders > 0:
+                # Updating the LOBs current best price (for Bid = highest bid)
                 best_price = self.bids.lob_anon[-1][0]
                 self.bids.best_price = best_price
                 self.bids.best_tid = self.bids.lob[best_price][1][0][2]
@@ -309,6 +310,7 @@ class Exchange(Orderbook):
         elif order.otype == 'Ask':
             self.asks.book_del(order)
             if self.asks.n_orders > 0:
+                # Updating the LOBs current best price (for Ask = Lowest Ask) (so best price is sort in ascending order?)
                 best_price = self.asks.lob_anon[0][0]
                 self.asks.best_price = best_price
                 self.asks.best_tid = self.asks.lob[best_price][1][0][2]
@@ -639,6 +641,7 @@ class TraderGiveaway(Trader):
         :param lob: the current state of the LOB.
         :return: a new order from this trader.
         """
+
         # this test for negative countdown is purely to stop PyCharm warning about unused parameter value
         if countdown < 0:
             sys.exit('Negative countdown')
