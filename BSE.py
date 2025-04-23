@@ -443,7 +443,7 @@ class Exchange(Orderbook):
                                'sess_hi': self.asks.session_extreme,
                                'n': self.asks.n_orders,
                                'lob': self.asks.lob_anon}
-        public_data['QID'] = self.quote_id
+        public_data['QID'] = self.quote_id # QID is just the unique identifier of the LOB within the session. I.e. it is updated for every new public LOB (arrival of new orders)
         public_data['tape'] = self.tape
 
         if lob_file is not None:
@@ -3411,7 +3411,7 @@ if __name__ == "__main__":
     # now run a sequence of trials, one session per trial
 
     # if verbose = True, print a running commentary describing what's going on.
-    verbose = False
+    verbose = True
 
     # n_trials is how many trials (i.e. market sessions) to run in total
     n_trials = 1
