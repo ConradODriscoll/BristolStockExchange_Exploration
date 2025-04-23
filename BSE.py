@@ -2154,7 +2154,7 @@ class TraderPT1(Trader):
     def getorder(self, time, countdown, lob):
         """
         return this trader's order when it is polled in the main market_session loop.
-        :param time: the current time.
+        :param time: the current time. # is this in timesteps or seconds?
         :param countdown: the time remaining until market closes (not currently used).
         :param lob: the public lob.
         :return: trader's new order, or None.
@@ -2178,11 +2178,11 @@ class TraderPT1(Trader):
     def respond(self, time, lob, trade, vrbs):
         """
         Respond to the current state of the public lob.
-        Buys if best bid is less than simple moving average of recent transcaction prices.
-        Sells as soon as it can make an acceptable profit.
+        Strat: Buys if best bid is less than simple moving average of recent transaction prices.
+               Sells as soon as it can make an acceptable profit.
         :param time: the current time
         :param lob: the current public lob
-        :param trade:
+        :param trade: ??? (what is this, what does it do in this func, and where is it from?)
         :param vrbs: verbosity -- if True then print running commentary, else stay silent
         :return: <nothing>
         """
@@ -2388,7 +2388,7 @@ class TraderPT2(Trader):
     def respond(self, time, lob, trade, vrbs):
         """
         Respond to the current state of the public lob.
-        Buys if best bid is less than simple moving average of recent transcaction prices.
+        Buys if best bid is less than simple moving average of recent transaction prices.
         Sells as soon as it can make an acceptable profit.
         :param time: the current time
         :param lob: the current public lob
@@ -3080,12 +3080,19 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
                             % (traders[trdr].tid, b['type'], b['time'], b['price'], b['party1'], b['party2'], b['qty']))
         bdump.close()
 
-    orders_verbose = False
-    lob_verbose = False
-    process_verbose = False
-    respond_verbose = False
-    bookkeep_verbose = False
-    populate_verbose = False
+    # orders_verbose = False
+    # lob_verbose = False
+    # process_verbose = False
+    # respond_verbose = False
+    # bookkeep_verbose = False
+    # populate_verbose = False
+    ## Try with True
+    orders_verbose = True
+    lob_verbose = True
+    process_verbose = True
+    respond_verbose = True
+    bookkeep_verbose = True
+    populate_verbose = True
 
     if dumpfile_flags['dump_strats']:
         strat_dump = open(sess_id + '_strats.csv', 'w')
@@ -3150,10 +3157,13 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
                 if traders[kill].lastquote is not None:
                     # if verbose : print('Killing order %s' % (str(traders[kill].lastquote)))
                     # NB if exchange.del_order() third argument = None then cancellations not written to tape file.
-                    # exchange.del_order(time, traders[kill].lastquote, tape_dump, sess_vrbs)
+                    # exchange.del_order(time, traders[kill].lastquote, tape_dump, sess_vrbs) #POSSIBLECHANGE
                     exchange.del_order(time, traders[kill].lastquote, None, sess_vrbs)
 
         # get a limit-order quote (or None) from a randomly chosen trader
+        # Why do we sample at random from a list of ALL traders on each time step regardless of if they have already had action epoch during that second?
+        # Should it not be done by converting keys to a set/list, sampling from the list, using that TID, removing from the list at t_step++, repeat until list empty?
+
         tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
 
         order = traders[tid].getorder(time, time_left, exchange.publish_lob(time, lobframes, lob_verbose))
@@ -3161,6 +3171,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, dum
             print('trader=%s order=%s' % (tid, order))
 
         if order is not None:
+            # Why does this exist?
             if order.otype == 'Ask' and order.price < traders[tid].orders[0].price:
                 sys.exit('Bad ask')
             if order.otype == 'Bid' and order.price > traders[tid].orders[0].price:
@@ -3308,10 +3319,11 @@ if __name__ == "__main__":
         pricerange = maxprice - minprice
         endtime = float(timesincestart)
         offsetfn_eventlist = []
+        # event in price events: [time_since_start, price]
         for event in priceevents:
             # normalise price
             normld_price = (event[1] - minprice) / pricerange
-            # clip
+            # clip (not really necessary?)
             normld_price = min(normld_price, 1.0)
             normld_price = max(0.0, normld_price)
             # scale & convert to integer cents
@@ -3320,7 +3332,7 @@ if __name__ == "__main__":
             if vrbs:
                 print(normld_event)
             offsetfn_eventlist.append(normld_event)
-        
+        # event in offset event list : [event_time_as_%_of_session_data, normalised price]
         return offsetfn_eventlist
 
 
@@ -3345,6 +3357,8 @@ if __name__ == "__main__":
             if percent_elapsed < event[0]:
                 break
         return offset
+
+        # WHAT IF WE RETURNED THE OFFSET AND UPDATED A GLOBAL PARAM FOR POSITION OF EVENT THAT WE BROKE ON? (HOW MUCH WOULD THAT SPEED IT UP?)
 
 
     def schedule_offsetfn_increasing_sinusoid(t, params):
